@@ -67,28 +67,33 @@
  */
 
 //(c) [Szir99]
-typedef double Coord;
-typedef struct { double R, G, B; } Color;
+typedef float Coord;
 
 //(c) [Szir99]
+
+typedef struct {
+    float R, G, B;
+} Color;
+
+//(c) [Szir99]
+
 template < class Type > class Array {
-    int
-    alloc_size, size;
+    int alloc_size, size;
     Type * array;
 public:
     Array(int s = 0);
     void operator=(Array& a);
     Type& operator[] (int idx);
-    int
-    Size();
+    int Size();
 };
 
 //(c) [Szir99]
+
 class Point2D {
     Coord x, y;
 public:
 
-    Point2D(double x0 = 0, double y0 = 0) {
+    Point2D(float x0 = 0, float y0 = 0) {
         x = x0;
         y = y0;
     }
@@ -101,19 +106,19 @@ public:
         return Point2D(x + p.x, y + p.y);
     }
 
-    Point2D operator*(double s) {
+    Point2D operator*(float s) {
         return Point2D(x*s, y * s);
     }
 
-    double Length() {
+    float Length() {
         return sqrt(x * x + y * y);
     }
 
-    double& X() {
+    float& X() {
         return x;
     }
 
-    double& Y() {
+    float& Y() {
         return y;
     }
 };
@@ -122,6 +127,7 @@ public:
 typedef Point2D Vector2D;
 
 //(c) [Szir99]
+
 class Primitive2D {
     Array<Point2D> points;
     Color color;
@@ -134,12 +140,15 @@ public:
         return points[i];
     }
 
-    int
-    PointNum() {
+    int PointNum() {
         return points.Size();
     }
 };
 
+bool fequals(float f1, float f2) {
+    if (fabs(f1 - f2) < 0.001) return true;
+    return false;
+}
 
 // Inicializacio, a program futasanak kezdeten, az OpenGL kontextus letrehozasa utan hivodik meg (ld. main() fv.)
 
@@ -158,24 +167,29 @@ void onDisplay() {
 
 }
 
-// Billentyuzet esemenyeket lekezelo fuggveny
-
 void onKeyboard(unsigned char key, int x, int y) {
     if (key == 'd') glutPostRedisplay(); // d beture rajzold ujra a kepet
 
-}
+    //lift iranyitasanak kezelese
+    if (key == 'q') {
 
-// Eger esemenyeket lekezelo fuggveny
+    }
+    if (key == 'a') {
+
+    }
+    if (key == 'o') {
+
+    }
+    if (key == 'l') {
+
+    }
+}
 
 void onMouse(int button, int state, int x, int y) {
-    if (button == GLUT_LEFT && state == GLUT_DOWN); // A GLUT_LEFT_BUTTON / GLUT_RIGHT_BUTTON illetve GLUT_DOWN / GLUT_UP
 }
 
-// `Idle' esemenykezelo, jelzi, hogy az ido telik, az Idle esemenyek frekvenciajara csak a 0 a garantalt minimalis ertek
-
 void onIdle() {
-    long time = glutGet(GLUT_ELAPSED_TIME); // program inditasa ota eltelt ido
-
+    long time = glutGet(GLUT_ELAPSED_TIME);
 }
 
 // ...Idaig modosithatod
