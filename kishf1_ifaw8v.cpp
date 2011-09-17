@@ -126,6 +126,8 @@ bool fequals(float f1, float f2) {
 bool working = false;
 
 const int NUM_OF_FIELD_ELEMENTS = 9; //7 statikus szint-elem + 2 lift
+const int LIFT_A_INDEX = 7;
+const int LIFT_B_INDEX = 8;
 const float liftSteppingPx = 0.1;
 
 Point2D fieldElements[NUM_OF_FIELD_ELEMENTS][2]; //2 pontból lesz egy szakasz
@@ -153,15 +155,10 @@ void drawFieldElements() {
 // Inicializacio, a program futasanak kezdeten, az OpenGL kontextus letrehozasa utan hivodik meg (ld. main() fv.)
 
 void onInitialization() {
-    //- szintek letrehozasa
-    //---- 7 vonal: 2x3 db + 1 also (?)
-    //- ket lift letrehozasa
     //- egy giliszta letrehozasa
-    //- lift mozgatása
     //- giliszta mozgatása billentyure
 
     //szintek letrehozasa
-
     //felso szint
     fieldElements[0][0] = Point2D(-1.0, 0.30);
     fieldElements[0][1] = Point2D(-0.6, 0.30);
@@ -186,13 +183,13 @@ void onInitialization() {
     fieldElements[6][0] = Point2D(-1.0, -1.00);
     fieldElements[6][1] = Point2D(1.0, -1.0);
 
-    //egyik lift
-    fieldElements[7][0] = Point2D(-0.6, 0.0);
-    fieldElements[7][1] = Point2D(-0.2, 0.0);
+    //egyik lift ("A")
+    fieldElements[LIFT_A_INDEX][0] = Point2D(-0.6, 0.0);
+    fieldElements[LIFT_A_INDEX][1] = Point2D(-0.2, 0.0);
 
-    //masik lift
-    fieldElements[8][0] = Point2D(0.2, 0.0);
-    fieldElements[8][1] = Point2D(0.6, 0.0);
+    //masik lift ("B")
+    fieldElements[LIFT_B_INDEX][0] = Point2D(0.2, 0.0);
+    fieldElements[LIFT_B_INDEX][1] = Point2D(0.6, 0.0);
 
 }
 
@@ -216,30 +213,30 @@ void onKeyboard(unsigned char key, int x, int y) {
 
     //lift iranyitasanak kezelese
     if (key == 'q') {
-        if (!isYOverflow(fieldElements[7][0].Y() + liftSteppingPx, true)) {
-            fieldElements[7][0].Y() += liftSteppingPx;
-            fieldElements[7][1].Y() += liftSteppingPx;
+        if (!isYOverflow(fieldElements[LIFT_A_INDEX][0].Y() + liftSteppingPx, true)) {
+            fieldElements[LIFT_A_INDEX][0].Y() += liftSteppingPx;
+            fieldElements[LIFT_A_INDEX][1].Y() += liftSteppingPx;
             glutPostRedisplay();
         }
     }
     if (key == 'a') {
-        if (!isYOverflow(fieldElements[7][0].Y() - liftSteppingPx, false)) {
-            fieldElements[7][0].Y() -= liftSteppingPx;
-            fieldElements[7][1].Y() -= liftSteppingPx;
+        if (!isYOverflow(fieldElements[LIFT_A_INDEX][0].Y() - liftSteppingPx, false)) {
+            fieldElements[LIFT_A_INDEX][0].Y() -= liftSteppingPx;
+            fieldElements[LIFT_A_INDEX][1].Y() -= liftSteppingPx;
             glutPostRedisplay();
         }
     }
     if (key == 'o') {
-        if (!isYOverflow(fieldElements[8][0].Y() + liftSteppingPx, true)) {
-            fieldElements[8][0].Y() += liftSteppingPx;
-            fieldElements[8][1].Y() += liftSteppingPx;
+        if (!isYOverflow(fieldElements[LIFT_B_INDEX][0].Y() + liftSteppingPx, true)) {
+            fieldElements[LIFT_B_INDEX][0].Y() += liftSteppingPx;
+            fieldElements[LIFT_B_INDEX][1].Y() += liftSteppingPx;
             glutPostRedisplay();
         }
     }
     if (key == 'l') {
-        if (!isYOverflow(fieldElements[8][0].Y() - liftSteppingPx, false)) {
-            fieldElements[8][0].Y() -= liftSteppingPx;
-            fieldElements[8][1].Y() -= liftSteppingPx;
+        if (!isYOverflow(fieldElements[LIFT_B_INDEX][0].Y() - liftSteppingPx, false)) {
+            fieldElements[LIFT_B_INDEX][0].Y() -= liftSteppingPx;
+            fieldElements[LIFT_B_INDEX][1].Y() -= liftSteppingPx;
             glutPostRedisplay();
         }
     }
