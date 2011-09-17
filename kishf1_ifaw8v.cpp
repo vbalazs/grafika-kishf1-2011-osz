@@ -27,7 +27,7 @@
 //
 // NYILATKOZAT
 // ---------------------------------------------------------------------------------------------
-// Nev    : VARGA BALÁZS
+// Nev    : VARGA BALAZS
 // Neptun : IFAW8V
 // ---------------------------------------------------------------------------------------------
 // ezennel kijelentem, hogy a feladatot magam keszitettem, es ha barmilyen segitseget igenybe vettem vagy 
@@ -62,7 +62,7 @@
 //=============================================================
 
 /*
- * Irodalomjegyzék
+ * Irodalomjegyzek
  * [Szir99] DR . SZIRMAY-KALOS LASZLO - SZAMITOGEPES GRAFIKA, 1999.
  */
 
@@ -74,18 +74,6 @@ typedef float Coord;
 typedef struct {
     float R, G, B;
 } Color;
-
-//(c) [Szir99]
-
-template < class Type > class Array {
-    int alloc_size, size;
-    Type * array;
-public:
-    Array(int s = 0);
-    void operator=(Array& a);
-    Type& operator[] (int idx);
-    int Size();
-};
 
 //(c) [Szir99]
 
@@ -123,48 +111,104 @@ public:
     }
 };
 
-//(c) [Szir99]
-typedef Point2D Vector2D;
-
-//(c) [Szir99]
-
-class Primitive2D {
-    Array<Point2D> points;
-    Color color;
-public:
-
-    Primitive2D(Color& c, int n = 0) : color(c), points(n) {
-    }
-
-    Point2D& Point(int i) {
-        return points[i];
-    }
-
-    int PointNum() {
-        return points.Size();
-    }
-};
+//(c) otlet: https://lists.sch.bme.hu/wws/arc/grafika/2011-09/msg00264.html
 
 bool fequals(float f1, float f2) {
     if (fabs(f1 - f2) < 0.001) return true;
     return false;
 }
 
+//egysegnegyzet
+//-- kozepen 0.0, 0.0
+//-- bal also sarok: -1.0, -1.0
+//-- jobb felso sarok: 1.0, 1.0
+
+bool working = false;
+
+const int NUM_OF_FIELD_ELEMENTS = 9; //7 statikus szint-elem + 2 lift
+const float liftSteppingPx = 0.1;
+
+Point2D fieldElements[NUM_OF_FIELD_ELEMENTS][2]; //2 pontból lesz egy szakasz
+
+bool isYOverflow(const float y, const bool positive) {
+    if (fequals(y - 1.1, 0) && positive) return true; //lebeg?pontos szopófaktor!
+    if (fequals(y + 1.1, 0) && !positive) return true;
+    return false;
+}
+
+//pálya elemek rajzolása
+
+void drawFieldElements() {
+    glColor3f(1.0, 1.0, 1.0); // fehérrel
+    glBegin(GL_LINES);
+
+    for (int i = 0; i < NUM_OF_FIELD_ELEMENTS; i++) {
+        glVertex2f(fieldElements[i][0].X(), fieldElements[i][0].Y());
+        glVertex2f(fieldElements[i][1].X(), fieldElements[i][1].Y());
+    }
+
+    glEnd();
+}
+
 // Inicializacio, a program futasanak kezdeten, az OpenGL kontextus letrehozasa utan hivodik meg (ld. main() fv.)
 
 void onInitialization() {
+    //- szintek letrehozasa
+    //---- 7 vonal: 2x3 db + 1 also (?)
+    //- ket lift letrehozasa
+    //- egy giliszta letrehozasa
+    //- lift mozgatása
+    //- giliszta mozgatása billentyure
+
+    //szintek letrehozasa
+
+    //felso szint
+    fieldElements[0][0] = Point2D(-1.0, 0.30);
+    fieldElements[0][1] = Point2D(-0.6, 0.30);
+
+    fieldElements[1][0] = Point2D(-0.2, 0.30);
+    fieldElements[1][1] = Point2D(0.2, 0.30);
+
+    fieldElements[2][0] = Point2D(0.6, 0.30);
+    fieldElements[2][1] = Point2D(1.0, 0.30);
+
+    //kozepso szint
+    fieldElements[3][0] = Point2D(-1.0, -0.30);
+    fieldElements[3][1] = Point2D(-0.6, -0.30);
+
+    fieldElements[4][0] = Point2D(-0.2, -0.30);
+    fieldElements[4][1] = Point2D(0.2, -0.30);
+
+    fieldElements[5][0] = Point2D(0.6, -0.30);
+    fieldElements[5][1] = Point2D(1.0, -0.30);
+
+    //also szint vegig
+    fieldElements[6][0] = Point2D(-1.0, -1.00);
+    fieldElements[6][1] = Point2D(1.0, -1.0);
+
+    //egyik lift
+    fieldElements[7][0] = Point2D(-0.6, 0.0);
+    fieldElements[7][1] = Point2D(-0.2, 0.0);
+
+    //masik lift
+    fieldElements[8][0] = Point2D(0.2, 0.0);
+    fieldElements[8][1] = Point2D(0.6, 0.0);
+
 }
 
 // Rajzolas, ha az alkalmazas ablak ervenytelenne valik, akkor ez a fuggveny hivodik meg
 
 void onDisplay() {
-    glClearColor(0.1f, 0.2f, 0.3f, 1.0f); // torlesi szin beallitasa
+    glClearColor(0, 0, 0, 0); // torlesi szin beallitasa
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // kepernyo torles
 
-    // ...
+    if (!working) {
+        //ujrarajzolasok
+    }
 
-    glutSwapBuffers(); // Buffercsere: rajzolas vege
+    drawFieldElements();
 
+    glutSwapBuffers();
 }
 
 void onKeyboard(unsigned char key, int x, int y) {
@@ -172,16 +216,32 @@ void onKeyboard(unsigned char key, int x, int y) {
 
     //lift iranyitasanak kezelese
     if (key == 'q') {
-
+        if (!isYOverflow(fieldElements[7][0].Y() + liftSteppingPx, true)) {
+            fieldElements[7][0].Y() += liftSteppingPx;
+            fieldElements[7][1].Y() += liftSteppingPx;
+            glutPostRedisplay();
+        }
     }
     if (key == 'a') {
-
+        if (!isYOverflow(fieldElements[7][0].Y() - liftSteppingPx, false)) {
+            fieldElements[7][0].Y() -= liftSteppingPx;
+            fieldElements[7][1].Y() -= liftSteppingPx;
+            glutPostRedisplay();
+        }
     }
     if (key == 'o') {
-
+        if (!isYOverflow(fieldElements[8][0].Y() + liftSteppingPx, true)) {
+            fieldElements[8][0].Y() += liftSteppingPx;
+            fieldElements[8][1].Y() += liftSteppingPx;
+            glutPostRedisplay();
+        }
     }
     if (key == 'l') {
-
+        if (!isYOverflow(fieldElements[8][0].Y() - liftSteppingPx, false)) {
+            fieldElements[8][0].Y() -= liftSteppingPx;
+            fieldElements[8][1].Y() -= liftSteppingPx;
+            glutPostRedisplay();
+        }
     }
 }
 
