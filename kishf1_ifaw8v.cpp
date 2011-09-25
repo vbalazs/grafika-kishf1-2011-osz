@@ -68,6 +68,8 @@
 
 #define W_HEAD_SIZE 0.03
 #define W_HEAD_POINTS_NUM 4
+#define W_TAIL_FULL_AMPL 0.03
+#define W_TAIL_PERIODS_NUM 3
 #define W_TAIL_FULL_LENGTH 0.15
 #define W_TAIL_RESOLUTION 0.001
 #define W_TAIL_POINTS_NUM 150 //FULL_LENGTH/TAIL_RESOLUTION
@@ -133,6 +135,31 @@ class Worm {
     bool shortMode; //rövid állapot?
     bool toLeft; //balra tart?
     Color color;
+
+    void generateTailPoints() {
+        float ampl = W_TAIL_FULL_AMPL;
+        float xlen = W_TAIL_FULL_LENGTH;
+        if (shortMode) {
+            ampl = 0.030121823;
+            xlen = xlen / 2;
+        }
+        int c = 0;
+        for (float i = 0.0; i < xlen; i += W_TAIL_RESOLUTION) {
+            Point2D nosePos = headPoints[0];
+
+            float x = i;
+            float y = nosePos.Y() - ampl * sin(2 * W_TAIL_PERIODS_NUM * M_PI / xlen * x);
+
+            if (toLeft) { //balra megy
+                x = nosePos.X() + x;
+            } else {
+                x = nosePos.X() - 2 * W_HEAD_SIZE - x;
+            }
+
+            Point2D tailPoint(x, y);
+            tailPoints[c++] = tailPoint;
+        }
+    }
 public:
 
     Worm() {
@@ -146,6 +173,8 @@ public:
 
     void setShortMode(bool _shortMode) {
         shortMode = _shortMode;
+
+        generateTailPoints();
     }
 
     void setColor(Color color) {
@@ -165,6 +194,8 @@ public:
         headPoints[2] = tmp;
         tmp.set(_nosePos.X() - W_HEAD_SIZE, _nosePos.Y() + W_HEAD_SIZE);
         headPoints[3] = tmp;
+
+        generateTailPoints();
     }
 
     Point2D getNosePos() const {
@@ -175,12 +206,18 @@ public:
         return headPoints;
     }
 
+    Point2D* getTailPoints() {
+        return tailPoints;
+    }
+
     bool isToLeft() const {
         return toLeft;
     }
 
     void setToLeft(bool _toLeft) {
         toLeft = _toLeft;
+
+        generateTailPoints();
     }
 
 };
@@ -239,39 +276,23 @@ void initWorm(Worm &w, Point2D nosePos, Color color) {
 void drawWorm(Worm &w) {
     working = true;
 
-    //TODO!! a számolásokat nem itt kéne, csak a kirajzolást!
-
     //megrajzolni a fejét
     glColor3f(w.getColor().R, w.getColor().G, w.getColor().B);
     glBegin(GL_POLYGON);
-    glVertex2f(w.getNosePos().X(), w.getNosePos().Y());
-    glVertex2f(w.getNosePos().X() - W_HEAD_SIZE, w.getNosePos().Y() - W_HEAD_SIZE);
-    glVertex2f(w.getNosePos().X() - W_HEAD_SIZE * 2, w.getNosePos().Y());
-    glVertex2f(w.getNosePos().X() - W_HEAD_SIZE, w.getNosePos().Y() + W_HEAD_SIZE);
+    for (int i = 0; i < W_HEAD_POINTS_NUM; i++) {
+        glVertex2f(w.getHeadPoints()[i].X(), w.getHeadPoints()[i].Y());
+    }
     glEnd();
 
     //megrajzolni a farkát
-    glBegin(GL_LINE_STRIP);
-    float ampl = 0.03;
-    float k = 3;
-    float xlen = W_TAIL_FULL_LENGTH;
+    int xlen = W_TAIL_POINTS_NUM;
     if (w.isShortMode()) {
-        ampl = 0.030121823;
-        xlen = W_TAIL_FULL_LENGTH / 2;
+        xlen = xlen / 2;
     }
-    for (float i = 0.001; i < xlen; i += 0.001) {
-        float x = i;
-        float y = w.getNosePos().Y() - ampl * sin(2 * k * M_PI / xlen * x);
-
-        if (w.isToLeft()) { //balra megy
-            x = w.getNosePos().X() + x;
-        } else {
-            x = w.getNosePos().X() - 2 * W_HEAD_SIZE - x;
-        }
-
-        glVertex2f(x, y);
+    glBegin(GL_LINE_STRIP);
+    for (int i = 0; i < xlen; i++) {
+        glVertex2f(w.getTailPoints()[i].X(), w.getTailPoints()[i].Y());
     }
-
     glEnd();
 
     working = false;
