@@ -68,11 +68,16 @@
 
 //(c) [Szir99]
 typedef float Coord;
-
 //(c) [Szir99]
 
 typedef struct {
     float R, G, B;
+
+    void set(float r, float g, float b) {
+        R = r;
+        G = g;
+        B = b;
+    }
 } Color;
 
 //(c) [Szir99]
@@ -111,6 +116,54 @@ public:
     }
 };
 
+class Worm {
+    Point2D nosePos;
+    bool shortMode; //nyúlt állapot?
+    bool toLeft; //irány
+    Color color;
+public:
+    const static float HEAD_SIZE = 0.03;
+    const static float FULL_LENGTH = 0.15;
+
+    Worm() {
+        toLeft = false;
+        shortMode = false;
+    }
+
+    bool isShortMode() const {
+        return shortMode;
+    }
+
+    void setShortMode(bool _shortMode) {
+        shortMode = _shortMode;
+    }
+
+    void setColor(Color color) {
+        this->color = color;
+    }
+
+    Color getColor() const {
+        return color;
+    }
+
+    void setNosePos(Point2D _nosePos) {
+        nosePos = _nosePos;
+    }
+
+    Point2D getNosePos() const {
+        return nosePos;
+    }
+
+    bool isToLeft() const {
+        return toLeft;
+    }
+
+    void setToLeft(bool _toLeft) {
+        toLeft = _toLeft;
+    }
+
+};
+
 //(c) otlet: https://lists.sch.bme.hu/wws/arc/grafika/2011-09/msg00264.html
 
 bool fequals(float f1, float f2) {
@@ -118,10 +171,11 @@ bool fequals(float f1, float f2) {
     return false;
 }
 
-//egysegnegyzet
-//-- kozepen 0.0, 0.0
-//-- bal also sarok: -1.0, -1.0
-//-- jobb felso sarok: 1.0, 1.0
+bool isYOverflow(const float y, const bool positive) {
+    if (fequals(y - 1.1, 0) && positive) return true; //lebegopontos szopófaktor!
+    if (fequals(y + 1.1, 0) && !positive) return true;
+    return false;
+}
 
 bool working = false;
 
@@ -132,11 +186,8 @@ const float liftSteppingPx = 0.1;
 
 Point2D fieldElements[NUM_OF_FIELD_ELEMENTS][2]; //2 pontból lesz egy szakasz
 
-bool isYOverflow(const float y, const bool positive) {
-    if (fequals(y - 1.1, 0) && positive) return true; //lebeg?pontos szopófaktor!
-    if (fequals(y + 1.1, 0) && !positive) return true;
-    return false;
-}
+Worm greenWorm;
+Worm redWorm;
 
 //pálya elemek rajzolása
 
@@ -152,12 +203,72 @@ void drawFieldElements() {
     glEnd();
 }
 
+void initWorm(Worm &w, Point2D nosePos, Color color) {
+
+    //beállítani a színt
+    w.setColor(color);
+
+    //beállítani a fej pontját
+    w.setNosePos(nosePos);
+}
+
+void drawWorm(Worm &w) {
+    working = true;
+
+    //megrajzolni a fejét
+    glColor3f(w.getColor().R, w.getColor().G, w.getColor().B);
+    glBegin(GL_POLYGON);
+    glVertex2f(w.getNosePos().X(), w.getNosePos().Y());
+    glVertex2f(w.getNosePos().X() - Worm::HEAD_SIZE, w.getNosePos().Y() - Worm::HEAD_SIZE);
+    glVertex2f(w.getNosePos().X() - Worm::HEAD_SIZE * 2, w.getNosePos().Y());
+    glVertex2f(w.getNosePos().X() - Worm::HEAD_SIZE, w.getNosePos().Y() + Worm::HEAD_SIZE);
+    glEnd();
+
+    //megrajzolni a farkát
+    //    float l = 14.5;
+    //    float div = 1;
+    //    if (!w.isLongMode()) {
+    //        div = 2;
+    //        l /= div;
+    //    }
+    //    glBegin(GL_LINE_STRIP);
+    //    for (float i = 0.0; i < l; i += 0.001) {
+    //        float x = w.getNosePos().X() - 2 * w.HEAD_SIZE - i / 100; //100
+    //        float y = w.getNosePos().Y() - sin(i * div) / 35; //35
+    //        glVertex2f(x, y);
+    //        
+    //    }
+    glBegin(GL_LINE_STRIP);
+    //l=1; k=15; a=0.03; -> I=2.059126028
+    float ampl = 0.03;
+    float l = 1;
+    float k = 15;
+    float xlen = Worm::FULL_LENGTH;
+    if (w.isShortMode()) {
+        k = 30;
+        xlen = Worm::FULL_LENGTH / 2;
+    }
+    for (float i = 0.001; i < xlen; i += 0.001) {
+        float x = i;
+        float y = w.getNosePos().Y() - ampl * sin(2 * k * M_PI / l * x);
+
+        if (w.isToLeft()) { //balra megy
+            x = w.getNosePos().X() + x;
+        } else {
+            x = w.getNosePos().X() - 2 * Worm::HEAD_SIZE - x;
+        }
+
+        glVertex2f(x, y);
+    }
+
+    glEnd();
+
+    working = false;
+}
+
 // Inicializacio, a program futasanak kezdeten, az OpenGL kontextus letrehozasa utan hivodik meg (ld. main() fv.)
 
 void onInitialization() {
-    //- egy giliszta letrehozasa
-    //- giliszta mozgatása billentyure
-
     //szintek letrehozasa
     //felso szint
     fieldElements[0][0] = Point2D(-1.0, 0.30);
@@ -191,6 +302,19 @@ void onInitialization() {
     fieldElements[LIFT_B_INDEX][0] = Point2D(0.2, 0.0);
     fieldElements[LIFT_B_INDEX][1] = Point2D(0.6, 0.0);
 
+    Point2D nose(-0.00, 0.34);
+    Color c;
+
+    //zöld giliszta
+    c.set(0.0, 1.0, 0.0);
+    initWorm(greenWorm, nose, c);
+
+    //piros giliszta
+    nose.X() = -0.00;
+    nose.Y() = -0.26;
+    c.set(1.0, 0.0, 0.0);
+    initWorm(redWorm, nose, c);
+    redWorm.setToLeft(true);
 }
 
 // Rajzolas, ha az alkalmazas ablak ervenytelenne valik, akkor ez a fuggveny hivodik meg
@@ -201,9 +325,10 @@ void onDisplay() {
 
     if (!working) {
         //ujrarajzolasok
+        drawFieldElements();
+        drawWorm(greenWorm);
+        drawWorm(redWorm);
     }
-
-    drawFieldElements();
 
     glutSwapBuffers();
 }
@@ -211,6 +336,7 @@ void onDisplay() {
 void onKeyboard(unsigned char key, int x, int y) {
     if (key == 'd') glutPostRedisplay(); // d beture rajzold ujra a kepet
 
+    working = true;
     //lift iranyitasanak kezelese
     if (key == 'q') {
         if (!isYOverflow(fieldElements[LIFT_A_INDEX][0].Y() + liftSteppingPx, true)) {
@@ -240,6 +366,17 @@ void onKeyboard(unsigned char key, int x, int y) {
             glutPostRedisplay();
         }
     }
+    if (key == 'y') {
+        greenWorm.setShortMode(!greenWorm.isShortMode());
+        glutPostRedisplay();
+    }
+    if (key == 'x') {
+        Point2D newPos(greenWorm.getNosePos().X() + Worm::FULL_LENGTH / 2, greenWorm.getNosePos().Y());
+        greenWorm.setShortMode(!greenWorm.isShortMode());
+        greenWorm.setNosePos(newPos);
+        glutPostRedisplay();
+    }
+    working = false;
 }
 
 void onMouse(int button, int state, int x, int y) {
@@ -247,6 +384,12 @@ void onMouse(int button, int state, int x, int y) {
 
 void onIdle() {
     long time = glutGet(GLUT_ELAPSED_TIME);
+    //    	Az állapot frissítése az eltelt ido függvényében
+    //		Eltelt ido idoszeletekre bontása
+    //			for minden idoszelet
+    //				Objektumok pozíciójának számolása
+    //				Ütközésvizsgálat - Ütközés hatásának beállítása
+    //	glutPostRedisplay
 }
 
 // ...Idaig modosithatod
