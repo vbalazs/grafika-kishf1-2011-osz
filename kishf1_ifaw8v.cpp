@@ -73,6 +73,7 @@
 #define W_TAIL_FULL_LENGTH 0.15
 #define W_TAIL_RESOLUTION 0.001
 #define W_TAIL_POINTS_NUM 150 //FULL_LENGTH/TAIL_RESOLUTION
+#define W_SPEED_DIV 36
 
 //pálya (field) elemek
 #define F_NUM_OF_ELEMENTS 9 //7 statikus szint-elem + 2 lift
@@ -81,6 +82,7 @@
 #define F_LIFT_STEPPING 0.1
 
 bool working = false;
+float time = 0;
 
 //(c) [Szir99]
 typedef float Coord;
@@ -140,23 +142,26 @@ public:
 class Worm {
     Point2D headPoints[W_HEAD_POINTS_NUM];
     Point2D tailPoints[W_TAIL_POINTS_NUM];
-    bool shortMode; //rövid állapot?
+    float length;
+    bool shorter;
     bool toLeft; //balra tart?
     Color color;
 
     void generateTailPoints() {
-        float ampl = W_TAIL_FULL_AMPL;
-        float xlen = W_TAIL_FULL_LENGTH;
-        if (shortMode) {
-            ampl = 0.030121823;
-            xlen = xlen / 2;
-        }
+
+        //        float ampl = W_TAIL_FULL_AMPL;
+        //        ampl = 0.030121823;
+
+        float const multipl = 16 * pow(W_TAIL_PERIODS_NUM, 2);
+        float ampl = sqrt((pow(W_TAIL_FULL_LENGTH, 2) + multipl * pow(W_TAIL_FULL_AMPL, 2)
+                - pow(length, 2)) / multipl);
+
         int c = 0;
-        for (float i = 0.0; i < xlen; i += W_TAIL_RESOLUTION) {
+        for (float i = 0.0; i < length; i += W_TAIL_RESOLUTION) {
             Point2D nosePos = headPoints[0];
 
             float x = i;
-            float y = nosePos.Y() - ampl * sin(2 * W_TAIL_PERIODS_NUM * M_PI / xlen * x);
+            float y = nosePos.Y() - ampl * sin(2 * W_TAIL_PERIODS_NUM * M_PI / length * x);
 
             if (toLeft) { //balra megy
                 x = nosePos.X() + x;
@@ -172,20 +177,8 @@ public:
 
     Worm() {
         toLeft = false;
-        shortMode = false;
-    }
-
-    bool isShortMode() const {
-        return shortMode;
-    }
-
-    void setShortMode(bool _shortMode) {
-        working = true;
-
-        shortMode = _shortMode;
-        generateTailPoints();
-
-        working = false;
+        shorter = true;
+        length = W_TAIL_FULL_LENGTH;
     }
 
     void setColor(Color color) {
@@ -199,6 +192,8 @@ public:
     void setNosePos(Point2D _nosePos) {
         working = true;
 
+        //hossz kiszamitasa
+
         headPoints[0] = _nosePos;
         Point2D tmp(_nosePos.X() - W_HEAD_SIZE, _nosePos.Y() - W_HEAD_SIZE);
         headPoints[1] = tmp;
@@ -210,6 +205,22 @@ public:
         generateTailPoints();
 
         working = false;
+    }
+
+    float getLength() const {
+        return length;
+    }
+
+    void setLength(float _length) {
+        length = _length;
+    }
+
+    bool isShorter() const {
+        return shorter;
+    }
+
+    void setShorter(bool _shorter) {
+        shorter = _shorter;
     }
 
     Point2D getNosePos() const {
@@ -233,6 +244,38 @@ public:
 
         toLeft = _toLeft;
         generateTailPoints();
+
+        working = false;
+    }
+
+    void control(float ts, float te) {
+        //step
+        working = true;
+
+        if (shorter) {
+            if (length - W_TAIL_FULL_LENGTH / W_SPEED_DIV < W_TAIL_FULL_LENGTH / 2) {
+                shorter = false;
+            } else {
+                length -= W_TAIL_FULL_LENGTH / W_SPEED_DIV;
+                generateTailPoints();
+            }
+        } else {
+            if (length + W_TAIL_FULL_LENGTH / W_SPEED_DIV > W_TAIL_FULL_LENGTH) {
+                shorter = true;
+            } else {
+                length += W_TAIL_FULL_LENGTH / W_SPEED_DIV;
+                Point2D newPos(headPoints[0].X() + W_TAIL_FULL_LENGTH / W_SPEED_DIV,
+                        headPoints[0].Y());
+                setNosePos(newPos);
+            }
+        }
+
+
+        //esesdetekt
+
+        //utkozesdetekt
+
+        //kilepesdetekt
 
         working = false;
     }
@@ -278,8 +321,6 @@ void initWorm(Worm &w, Point2D nosePos, Color color) {
 
     //beállítani a fej pontját
     w.setNosePos(nosePos);
-
-    //
 }
 
 void drawWorm(Worm &w) {
@@ -294,17 +335,36 @@ void drawWorm(Worm &w) {
     glEnd();
 
     //megrajzolni a farkát
-    int xlen = W_TAIL_POINTS_NUM;
-    if (w.isShortMode()) {
-        xlen = xlen / 2;
-    }
+    int c = w.getLength() / W_TAIL_RESOLUTION;
     glBegin(GL_LINE_STRIP);
-    for (int i = 0; i < xlen; i++) {
+    for (int i = 0; i < c; i++) {
         glVertex2f(w.getTailPoints()[i].X(), w.getTailPoints()[i].Y());
     }
     glEnd();
 
     working = false;
+}
+
+void simulateWorld(float tstart, float tend) {
+    //    	Az állapot frissítése az eltelt ido függvényében
+    //		Eltelt ido idoszeletekre bontása
+    //			for minden idoszelet
+    //				Objektumok pozíciójának számolása
+    //				Ütközésvizsgálat - Ütközés hatásának beállítása
+
+    float dt = 50;
+    for (float ts = tstart; ts < tend; ts += dt) {
+        float te;
+        if (tend >= ts + dt) {
+            te = ts + dt;
+        } else {
+            te = tend;
+        }
+
+        greenWorm.control(ts, te);
+        //        redWorm.control(te - tstart);
+    }
+
 }
 
 // Inicializacio, a program futasanak kezdeten, az OpenGL kontextus letrehozasa utan hivodik meg (ld. main() fv.)
@@ -403,14 +463,7 @@ void onKeyboard(unsigned char key, int x, int y) {
             fieldElements[F_LIFT_B_INDEX][1].Y() -= F_LIFT_STEPPING;
         }
     }
-//    if (key == 'y') {
-//        greenWorm.setShortMode(!greenWorm.isShortMode());
-//    }
-//    if (key == 'x') {
-//        Point2D newPos(greenWorm.getNosePos().X() + W_TAIL_FULL_LENGTH / 2, greenWorm.getNosePos().Y());
-//        greenWorm.setShortMode(!greenWorm.isShortMode());
-//        greenWorm.setNosePos(newPos);
-//    }
+
     working = false;
 
     glutPostRedisplay();
@@ -421,13 +474,11 @@ void onMouse(int button, int state, int x, int y) {
 
 void onIdle() {
     working = true;
-    long time = glutGet(GLUT_ELAPSED_TIME);
-    //    	Az állapot frissítése az eltelt ido függvényében
-    //		Eltelt ido idoszeletekre bontása
-    //			for minden idoszelet
-    //				Objektumok pozíciójának számolása
-    //				Ütközésvizsgálat - Ütközés hatásának beállítása
-    //	glutPostRedisplay
+    float old_time = time;
+    time = glutGet(GLUT_ELAPSED_TIME);
+
+    simulateWorld(old_time, time);
+
     working = false;
     glutPostRedisplay();
 }
