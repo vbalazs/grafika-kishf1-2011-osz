@@ -67,7 +67,8 @@
  */
 
 #define W_HEAD_SIZE 0.03
-#define W_FULL_LENGTH 0.15
+#define W_HEAD_POINTS_NUM 4
+#define W_TAIL_FULL_LENGTH 0.15
 #define W_TAIL_RESOLUTION 0.001
 #define W_TAIL_POINTS_NUM 150 //FULL_LENGTH/TAIL_RESOLUTION
 
@@ -119,13 +120,18 @@ public:
     float& Y() {
         return y;
     }
+
+    void set(float _x, float _y) {
+        x = _x;
+        y = _y;
+    }
 };
 
 class Worm {
-    Point2D nosePos;
+    Point2D headPoints[W_HEAD_POINTS_NUM];
     Point2D tailPoints[W_TAIL_POINTS_NUM];
-    bool shortMode; //nyúlt állapot?
-    bool toLeft; //irány
+    bool shortMode; //rövid állapot?
+    bool toLeft; //balra tart?
     Color color;
 public:
 
@@ -151,11 +157,22 @@ public:
     }
 
     void setNosePos(Point2D _nosePos) {
-        nosePos = _nosePos;
+        headPoints[0] = _nosePos;
+
+        Point2D tmp(_nosePos.X() - W_HEAD_SIZE, _nosePos.Y() - W_HEAD_SIZE);
+        headPoints[1] = tmp;
+        tmp.set(_nosePos.X() - W_HEAD_SIZE * 2, _nosePos.Y());
+        headPoints[2] = tmp;
+        tmp.set(_nosePos.X() - W_HEAD_SIZE, _nosePos.Y() + W_HEAD_SIZE);
+        headPoints[3] = tmp;
     }
 
     Point2D getNosePos() const {
-        return nosePos;
+        return headPoints[0];
+    }
+
+    Point2D* getHeadPoints() {
+        return headPoints;
     }
 
     bool isToLeft() const {
@@ -215,6 +232,8 @@ void initWorm(Worm &w, Point2D nosePos, Color color) {
 
     //beállítani a fej pontját
     w.setNosePos(nosePos);
+
+    //
 }
 
 void drawWorm(Worm &w) {
@@ -237,10 +256,11 @@ void drawWorm(Worm &w) {
     float ampl = 0.03;
     float l = 1;
     float k = 15;
-    float xlen = W_FULL_LENGTH;
+    float xlen = W_TAIL_FULL_LENGTH;
     if (w.isShortMode()) {
+        l = 0.5;
         k = 30;
-        xlen = W_FULL_LENGTH / 2;
+        xlen = W_TAIL_FULL_LENGTH / 2;
     }
     for (float i = 0.001; i < xlen; i += 0.001) {
         float x = i;
@@ -360,7 +380,7 @@ void onKeyboard(unsigned char key, int x, int y) {
         greenWorm.setShortMode(!greenWorm.isShortMode());
     }
     if (key == 'x') {
-        Point2D newPos(greenWorm.getNosePos().X() + W_FULL_LENGTH / 2, greenWorm.getNosePos().Y());
+        Point2D newPos(greenWorm.getNosePos().X() + W_TAIL_FULL_LENGTH / 2, greenWorm.getNosePos().Y());
         greenWorm.setShortMode(!greenWorm.isShortMode());
         greenWorm.setNosePos(newPos);
     }
