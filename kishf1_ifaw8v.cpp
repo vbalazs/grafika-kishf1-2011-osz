@@ -403,14 +403,14 @@ void onKeyboard(unsigned char key, int x, int y) {
             fieldElements[F_LIFT_B_INDEX][1].Y() -= F_LIFT_STEPPING;
         }
     }
-    if (key == 'y') {
-        greenWorm.setShortMode(!greenWorm.isShortMode());
-    }
-    if (key == 'x') {
-        Point2D newPos(greenWorm.getNosePos().X() + W_TAIL_FULL_LENGTH / 2, greenWorm.getNosePos().Y());
-        greenWorm.setShortMode(!greenWorm.isShortMode());
-        greenWorm.setNosePos(newPos);
-    }
+//    if (key == 'y') {
+//        greenWorm.setShortMode(!greenWorm.isShortMode());
+//    }
+//    if (key == 'x') {
+//        Point2D newPos(greenWorm.getNosePos().X() + W_TAIL_FULL_LENGTH / 2, greenWorm.getNosePos().Y());
+//        greenWorm.setShortMode(!greenWorm.isShortMode());
+//        greenWorm.setNosePos(newPos);
+//    }
     working = false;
 
     glutPostRedisplay();
