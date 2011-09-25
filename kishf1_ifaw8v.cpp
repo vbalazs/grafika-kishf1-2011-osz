@@ -144,16 +144,13 @@ class Worm {
     Point2D tailPoints[W_TAIL_POINTS_NUM];
     float length;
     bool shorter;
-    bool toLeft; //balra tart?
+    int toRight; //ha jobbra tart, akkor 1-gyel szorozzuk, ha balra, akkor -1-gyel
     Color color;
 
     void generateTailPoints() {
 
-        //        float ampl = W_TAIL_FULL_AMPL;
-        //        ampl = 0.030121823;
-
         float const multipl = 16 * pow(W_TAIL_PERIODS_NUM, 2);
-        float ampl = sqrt((pow(W_TAIL_FULL_LENGTH, 2) + multipl * pow(W_TAIL_FULL_AMPL, 2)
+        float const ampl = sqrt((pow(W_TAIL_FULL_LENGTH, 2) + multipl * pow(W_TAIL_FULL_AMPL, 2)
                 - pow(length, 2)) / multipl);
 
         int c = 0;
@@ -163,20 +160,20 @@ class Worm {
             float x = i;
             float y = nosePos.Y() - ampl * sin(2 * W_TAIL_PERIODS_NUM * M_PI / length * x);
 
-            if (toLeft) { //balra megy
-                x = nosePos.X() + x;
-            } else {
+            if (toRight > 0) { //balra megy
                 x = nosePos.X() - 2 * W_HEAD_SIZE - x;
+            } else {
+                x = nosePos.X() + x;
             }
 
-            Point2D tailPoint(x, y);
+            Point2D const tailPoint(x, y);
             tailPoints[c++] = tailPoint;
         }
     }
 public:
 
     Worm() {
-        toLeft = false;
+        toRight = 1;
         shorter = true;
         length = W_TAIL_FULL_LENGTH;
     }
@@ -235,14 +232,14 @@ public:
         return tailPoints;
     }
 
-    bool isToLeft() const {
-        return toLeft;
+    int getDir() const {
+        return toRight;
     }
 
-    void setToLeft(bool _toLeft) {
+    void setDir() {
         working = true;
 
-        toLeft = _toLeft;
+        toRight *= -1;
         generateTailPoints();
 
         working = false;
@@ -253,18 +250,20 @@ public:
         working = true;
 
         if (shorter) {
-            if (length - W_TAIL_FULL_LENGTH / W_SPEED_DIV < W_TAIL_FULL_LENGTH / 2) {
+            if (length - W_TAIL_FULL_LENGTH / W_SPEED_DIV
+                    < W_TAIL_FULL_LENGTH / 2) {
                 shorter = false;
             } else {
                 length -= W_TAIL_FULL_LENGTH / W_SPEED_DIV;
                 generateTailPoints();
             }
         } else {
-            if (length + W_TAIL_FULL_LENGTH / W_SPEED_DIV > W_TAIL_FULL_LENGTH) {
+            if (length + W_TAIL_FULL_LENGTH / W_SPEED_DIV
+                    > W_TAIL_FULL_LENGTH) {
                 shorter = true;
             } else {
                 length += W_TAIL_FULL_LENGTH / W_SPEED_DIV;
-                Point2D newPos(headPoints[0].X() + W_TAIL_FULL_LENGTH / W_SPEED_DIV,
+                Point2D newPos(headPoints[0].X() + (W_TAIL_FULL_LENGTH * toRight) / W_SPEED_DIV,
                         headPoints[0].Y());
                 setNosePos(newPos);
             }
@@ -362,7 +361,7 @@ void simulateWorld(float tstart, float tend) {
         }
 
         greenWorm.control(ts, te);
-        //        redWorm.control(te - tstart);
+        redWorm.control(ts, te);
     }
 
 }
@@ -415,7 +414,7 @@ void onInitialization() {
     nose.Y() = -0.26;
     c.set(1.0, 0.0, 0.0);
     initWorm(redWorm, nose, c);
-    redWorm.setToLeft(true);
+    redWorm.setDir();
 }
 
 // Rajzolas, ha az alkalmazas ablak ervenytelenne valik, akkor ez a fuggveny hivodik meg
