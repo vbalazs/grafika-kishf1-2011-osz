@@ -120,6 +120,8 @@ public:
     }
 };
 
+Point2D fieldElements[F_NUM_OF_ELEMENTS][2]; //2 pontból lesz egy szakasz
+
 class Worm {
     Point2D headPoints[W_HEAD_POINTS_NUM];
     Point2D tailPoints[W_TAIL_POINTS_NUM];
@@ -147,9 +149,41 @@ class Worm {
                 x = nosePos.X() + x;
             }
 
-            Point2D const tailPoint(x, y);
-            tailPoints[c++] = tailPoint;
+            tailPoints[c++] = Point2D(x, y);
         }
+    }
+
+    void fall(int liftindex) {
+        float deltaY = 0.01;
+
+        int noseIndex = 0;
+        int lastPoint = length / W_TAIL_RESOLUTION;
+//        if (toRight < 0) {
+//            noseIndex = 2;
+//            lastPoint = 0;
+//        }
+
+        if (headPoints[noseIndex].X() > fieldElements[liftindex][0].X() &&
+                headPoints[noseIndex].X() < fieldElements[liftindex][1].X() &&
+                tailPoints[lastPoint].X() > fieldElements[liftindex][0].X() &&
+                tailPoints[lastPoint].X() < fieldElements[liftindex][1].X()
+                ) {
+
+            //liftre esik v. a fsz-re?
+            if (fieldElements[liftindex][0].Y() < headPoints[noseIndex].Y()) { //liftre
+                setNosePos(Point2D(headPoints[noseIndex].X(),
+                        fieldElements[liftindex][0].Y() + W_HEAD_SIZE));
+            } else { //fsz
+                setNosePos(Point2D(headPoints[noseIndex].X(), -1.0 + W_HEAD_SIZE + deltaY));
+            }
+        }
+    }
+
+    void fallDetect() {
+
+        fall(F_LIFT_A_INDEX);
+        fall(F_LIFT_B_INDEX);
+
     }
 public:
 
@@ -212,6 +246,7 @@ public:
         //step
         working = true;
 
+        //mozgas animalasa
         if (shorter) {
             if (length - W_TAIL_FULL_LENGTH / W_SPEED_DIV
                     < W_TAIL_FULL_LENGTH / 2) {
@@ -240,6 +275,7 @@ public:
         }
 
         //esesdetekt
+        fallDetect();
 
         //utkozesdetekt
 
@@ -260,8 +296,6 @@ bool isYOverflow(const float y, const bool positive) {
     if (fequals(y + 1.1, 0) && !positive) return true;
     return false;
 }
-
-Point2D fieldElements[F_NUM_OF_ELEMENTS][2]; //2 pontból lesz egy szakasz
 
 Worm greenWorm;
 Worm redWorm;
