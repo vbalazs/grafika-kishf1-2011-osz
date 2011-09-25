@@ -66,6 +66,11 @@
  * [Szir99] DR . SZIRMAY-KALOS LASZLO - SZAMITOGEPES GRAFIKA, 1999.
  */
 
+#define W_HEAD_SIZE 0.03
+#define W_FULL_LENGTH 0.15
+#define W_TAIL_RESOLUTION 0.001
+#define W_TAIL_POINTS_NUM 150 //FULL_LENGTH/TAIL_RESOLUTION
+
 //(c) [Szir99]
 typedef float Coord;
 //(c) [Szir99]
@@ -118,12 +123,11 @@ public:
 
 class Worm {
     Point2D nosePos;
+    Point2D tailPoints[W_TAIL_POINTS_NUM];
     bool shortMode; //nyúlt állapot?
     bool toLeft; //irány
     Color color;
 public:
-    const static float HEAD_SIZE = 0.03;
-    const static float FULL_LENGTH = 0.15;
 
     Worm() {
         toLeft = false;
@@ -179,12 +183,13 @@ bool isYOverflow(const float y, const bool positive) {
 
 bool working = false;
 
-const int NUM_OF_FIELD_ELEMENTS = 9; //7 statikus szint-elem + 2 lift
-const int LIFT_A_INDEX = 7;
-const int LIFT_B_INDEX = 8;
-const float liftSteppingPx = 0.1;
+//pálya (field) elemek
+#define F_NUM_OF_ELEMENTS 9 //7 statikus szint-elem + 2 lift
+#define F_LIFT_A_INDEX 7
+#define F_LIFT_B_INDEX 8
+#define F_LIFT_STEPPING 0.1
 
-Point2D fieldElements[NUM_OF_FIELD_ELEMENTS][2]; //2 pontból lesz egy szakasz
+Point2D fieldElements[F_NUM_OF_ELEMENTS][2]; //2 pontból lesz egy szakasz
 
 Worm greenWorm;
 Worm redWorm;
@@ -195,7 +200,7 @@ void drawFieldElements() {
     glColor3f(1.0, 1.0, 1.0); // fehérrel
     glBegin(GL_LINES);
 
-    for (int i = 0; i < NUM_OF_FIELD_ELEMENTS; i++) {
+    for (int i = 0; i < F_NUM_OF_ELEMENTS; i++) {
         glVertex2f(fieldElements[i][0].X(), fieldElements[i][0].Y());
         glVertex2f(fieldElements[i][1].X(), fieldElements[i][1].Y());
     }
@@ -215,38 +220,27 @@ void initWorm(Worm &w, Point2D nosePos, Color color) {
 void drawWorm(Worm &w) {
     working = true;
 
+    //TODO!! a számolásokat nem itt kéne, csak a kirajzolást!
+
     //megrajzolni a fejét
     glColor3f(w.getColor().R, w.getColor().G, w.getColor().B);
     glBegin(GL_POLYGON);
     glVertex2f(w.getNosePos().X(), w.getNosePos().Y());
-    glVertex2f(w.getNosePos().X() - Worm::HEAD_SIZE, w.getNosePos().Y() - Worm::HEAD_SIZE);
-    glVertex2f(w.getNosePos().X() - Worm::HEAD_SIZE * 2, w.getNosePos().Y());
-    glVertex2f(w.getNosePos().X() - Worm::HEAD_SIZE, w.getNosePos().Y() + Worm::HEAD_SIZE);
+    glVertex2f(w.getNosePos().X() - W_HEAD_SIZE, w.getNosePos().Y() - W_HEAD_SIZE);
+    glVertex2f(w.getNosePos().X() - W_HEAD_SIZE * 2, w.getNosePos().Y());
+    glVertex2f(w.getNosePos().X() - W_HEAD_SIZE, w.getNosePos().Y() + W_HEAD_SIZE);
     glEnd();
 
     //megrajzolni a farkát
-    //    float l = 14.5;
-    //    float div = 1;
-    //    if (!w.isLongMode()) {
-    //        div = 2;
-    //        l /= div;
-    //    }
-    //    glBegin(GL_LINE_STRIP);
-    //    for (float i = 0.0; i < l; i += 0.001) {
-    //        float x = w.getNosePos().X() - 2 * w.HEAD_SIZE - i / 100; //100
-    //        float y = w.getNosePos().Y() - sin(i * div) / 35; //35
-    //        glVertex2f(x, y);
-    //        
-    //    }
     glBegin(GL_LINE_STRIP);
     //l=1; k=15; a=0.03; -> I=2.059126028
     float ampl = 0.03;
     float l = 1;
     float k = 15;
-    float xlen = Worm::FULL_LENGTH;
+    float xlen = W_FULL_LENGTH;
     if (w.isShortMode()) {
         k = 30;
-        xlen = Worm::FULL_LENGTH / 2;
+        xlen = W_FULL_LENGTH / 2;
     }
     for (float i = 0.001; i < xlen; i += 0.001) {
         float x = i;
@@ -255,7 +249,7 @@ void drawWorm(Worm &w) {
         if (w.isToLeft()) { //balra megy
             x = w.getNosePos().X() + x;
         } else {
-            x = w.getNosePos().X() - 2 * Worm::HEAD_SIZE - x;
+            x = w.getNosePos().X() - 2 * W_HEAD_SIZE - x;
         }
 
         glVertex2f(x, y);
@@ -295,12 +289,12 @@ void onInitialization() {
     fieldElements[6][1] = Point2D(1.0, -1.0);
 
     //egyik lift ("A")
-    fieldElements[LIFT_A_INDEX][0] = Point2D(-0.6, 0.0);
-    fieldElements[LIFT_A_INDEX][1] = Point2D(-0.2, 0.0);
+    fieldElements[F_LIFT_A_INDEX][0] = Point2D(-0.6, 0.0);
+    fieldElements[F_LIFT_A_INDEX][1] = Point2D(-0.2, 0.0);
 
     //masik lift ("B")
-    fieldElements[LIFT_B_INDEX][0] = Point2D(0.2, 0.0);
-    fieldElements[LIFT_B_INDEX][1] = Point2D(0.6, 0.0);
+    fieldElements[F_LIFT_B_INDEX][0] = Point2D(0.2, 0.0);
+    fieldElements[F_LIFT_B_INDEX][1] = Point2D(0.6, 0.0);
 
     Point2D nose(-0.00, 0.34);
     Color c;
@@ -339,50 +333,47 @@ void onKeyboard(unsigned char key, int x, int y) {
     working = true;
     //lift iranyitasanak kezelese
     if (key == 'q') {
-        if (!isYOverflow(fieldElements[LIFT_A_INDEX][0].Y() + liftSteppingPx, true)) {
-            fieldElements[LIFT_A_INDEX][0].Y() += liftSteppingPx;
-            fieldElements[LIFT_A_INDEX][1].Y() += liftSteppingPx;
-            glutPostRedisplay();
+        if (!isYOverflow(fieldElements[F_LIFT_A_INDEX][0].Y() + F_LIFT_STEPPING, true)) {
+            fieldElements[F_LIFT_A_INDEX][0].Y() += F_LIFT_STEPPING;
+            fieldElements[F_LIFT_A_INDEX][1].Y() += F_LIFT_STEPPING;
         }
     }
     if (key == 'a') {
-        if (!isYOverflow(fieldElements[LIFT_A_INDEX][0].Y() - liftSteppingPx, false)) {
-            fieldElements[LIFT_A_INDEX][0].Y() -= liftSteppingPx;
-            fieldElements[LIFT_A_INDEX][1].Y() -= liftSteppingPx;
-            glutPostRedisplay();
+        if (!isYOverflow(fieldElements[F_LIFT_A_INDEX][0].Y() - F_LIFT_STEPPING, false)) {
+            fieldElements[F_LIFT_A_INDEX][0].Y() -= F_LIFT_STEPPING;
+            fieldElements[F_LIFT_A_INDEX][1].Y() -= F_LIFT_STEPPING;
         }
     }
     if (key == 'o') {
-        if (!isYOverflow(fieldElements[LIFT_B_INDEX][0].Y() + liftSteppingPx, true)) {
-            fieldElements[LIFT_B_INDEX][0].Y() += liftSteppingPx;
-            fieldElements[LIFT_B_INDEX][1].Y() += liftSteppingPx;
-            glutPostRedisplay();
+        if (!isYOverflow(fieldElements[F_LIFT_B_INDEX][0].Y() + F_LIFT_STEPPING, true)) {
+            fieldElements[F_LIFT_B_INDEX][0].Y() += F_LIFT_STEPPING;
+            fieldElements[F_LIFT_B_INDEX][1].Y() += F_LIFT_STEPPING;
         }
     }
     if (key == 'l') {
-        if (!isYOverflow(fieldElements[LIFT_B_INDEX][0].Y() - liftSteppingPx, false)) {
-            fieldElements[LIFT_B_INDEX][0].Y() -= liftSteppingPx;
-            fieldElements[LIFT_B_INDEX][1].Y() -= liftSteppingPx;
-            glutPostRedisplay();
+        if (!isYOverflow(fieldElements[F_LIFT_B_INDEX][0].Y() - F_LIFT_STEPPING, false)) {
+            fieldElements[F_LIFT_B_INDEX][0].Y() -= F_LIFT_STEPPING;
+            fieldElements[F_LIFT_B_INDEX][1].Y() -= F_LIFT_STEPPING;
         }
     }
     if (key == 'y') {
         greenWorm.setShortMode(!greenWorm.isShortMode());
-        glutPostRedisplay();
     }
     if (key == 'x') {
-        Point2D newPos(greenWorm.getNosePos().X() + Worm::FULL_LENGTH / 2, greenWorm.getNosePos().Y());
+        Point2D newPos(greenWorm.getNosePos().X() + W_FULL_LENGTH / 2, greenWorm.getNosePos().Y());
         greenWorm.setShortMode(!greenWorm.isShortMode());
         greenWorm.setNosePos(newPos);
-        glutPostRedisplay();
     }
     working = false;
+
+    glutPostRedisplay();
 }
 
 void onMouse(int button, int state, int x, int y) {
 }
 
 void onIdle() {
+    working = true;
     long time = glutGet(GLUT_ELAPSED_TIME);
     //    	Az állapot frissítése az eltelt ido függvényében
     //		Eltelt ido idoszeletekre bontása
@@ -390,6 +381,8 @@ void onIdle() {
     //				Objektumok pozíciójának számolása
     //				Ütközésvizsgálat - Ütközés hatásának beállítása
     //	glutPostRedisplay
+    working = false;
+    glutPostRedisplay();
 }
 
 // ...Idaig modosithatod
