@@ -86,7 +86,6 @@ float time = 0;
 
 //(c) [Szir99]
 typedef float Coord;
-//(c) [Szir99]
 
 typedef struct {
     float R, G, B;
@@ -98,8 +97,6 @@ typedef struct {
     }
 } Color;
 
-//(c) [Szir99]
-
 class Point2D {
     Coord x, y;
 public:
@@ -107,22 +104,6 @@ public:
     Point2D(float x0 = 0, float y0 = 0) {
         x = x0;
         y = y0;
-    }
-
-    Point2D operator-() {
-        return Point2D(-x, -y);
-    }
-
-    Point2D operator+(Point2D p) {
-        return Point2D(x + p.x, y + p.y);
-    }
-
-    Point2D operator*(float s) {
-        return Point2D(x*s, y * s);
-    }
-
-    float Length() {
-        return sqrt(x * x + y * y);
     }
 
     float& X() {
@@ -154,8 +135,8 @@ class Worm {
                 - pow(length, 2)) / multipl);
 
         int c = 0;
+        Point2D nosePos = headPoints[0];
         for (float i = 0.0; i < length; i += W_TAIL_RESOLUTION) {
-            Point2D nosePos = headPoints[0];
 
             float x = i;
             float y = nosePos.Y() - ampl * sin(2 * W_TAIL_PERIODS_NUM * M_PI / length * x);
@@ -189,8 +170,6 @@ public:
     void setNosePos(Point2D _nosePos) {
         working = true;
 
-        //hossz kiszamitasa
-
         headPoints[0] = _nosePos;
         Point2D tmp(_nosePos.X() - W_HEAD_SIZE, _nosePos.Y() - W_HEAD_SIZE);
         headPoints[1] = tmp;
@@ -208,18 +187,6 @@ public:
         return length;
     }
 
-    void setLength(float _length) {
-        length = _length;
-    }
-
-    bool isShorter() const {
-        return shorter;
-    }
-
-    void setShorter(bool _shorter) {
-        shorter = _shorter;
-    }
-
     Point2D getNosePos() const {
         return headPoints[0];
     }
@@ -230,10 +197,6 @@ public:
 
     Point2D* getTailPoints() {
         return tailPoints;
-    }
-
-    int getDir() const {
-        return toRight;
     }
 
     void setDir() {
@@ -269,12 +232,16 @@ public:
             }
         }
 
+        //kilepesdetekt
+        if (toRight > 0 && headPoints[0].X() > 1.0) {
+            setDir();
+        } else if (toRight < 0 && headPoints[2].X() < -1.0) {
+            setDir();
+        }
 
         //esesdetekt
 
         //utkozesdetekt
-
-        //kilepesdetekt
 
         working = false;
     }
@@ -345,12 +312,6 @@ void drawWorm(Worm &w) {
 }
 
 void simulateWorld(float tstart, float tend) {
-    //    	Az állapot frissítése az eltelt ido függvényében
-    //		Eltelt ido idoszeletekre bontása
-    //			for minden idoszelet
-    //				Objektumok pozíciójának számolása
-    //				Ütközésvizsgálat - Ütközés hatásának beállítása
-
     float dt = 50;
     for (float ts = tstart; ts < tend; ts += dt) {
         float te;
