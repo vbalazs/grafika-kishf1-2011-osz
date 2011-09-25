@@ -74,6 +74,14 @@
 #define W_TAIL_RESOLUTION 0.001
 #define W_TAIL_POINTS_NUM 150 //FULL_LENGTH/TAIL_RESOLUTION
 
+//pálya (field) elemek
+#define F_NUM_OF_ELEMENTS 9 //7 statikus szint-elem + 2 lift
+#define F_LIFT_A_INDEX 7
+#define F_LIFT_B_INDEX 8
+#define F_LIFT_STEPPING 0.1
+
+bool working = false;
+
 //(c) [Szir99]
 typedef float Coord;
 //(c) [Szir99]
@@ -172,9 +180,12 @@ public:
     }
 
     void setShortMode(bool _shortMode) {
-        shortMode = _shortMode;
+        working = true;
 
+        shortMode = _shortMode;
         generateTailPoints();
+
+        working = false;
     }
 
     void setColor(Color color) {
@@ -186,8 +197,9 @@ public:
     }
 
     void setNosePos(Point2D _nosePos) {
-        headPoints[0] = _nosePos;
+        working = true;
 
+        headPoints[0] = _nosePos;
         Point2D tmp(_nosePos.X() - W_HEAD_SIZE, _nosePos.Y() - W_HEAD_SIZE);
         headPoints[1] = tmp;
         tmp.set(_nosePos.X() - W_HEAD_SIZE * 2, _nosePos.Y());
@@ -196,6 +208,8 @@ public:
         headPoints[3] = tmp;
 
         generateTailPoints();
+
+        working = false;
     }
 
     Point2D getNosePos() const {
@@ -215,9 +229,12 @@ public:
     }
 
     void setToLeft(bool _toLeft) {
-        toLeft = _toLeft;
+        working = true;
 
+        toLeft = _toLeft;
         generateTailPoints();
+
+        working = false;
     }
 
 };
@@ -234,14 +251,6 @@ bool isYOverflow(const float y, const bool positive) {
     if (fequals(y + 1.1, 0) && !positive) return true;
     return false;
 }
-
-bool working = false;
-
-//pálya (field) elemek
-#define F_NUM_OF_ELEMENTS 9 //7 statikus szint-elem + 2 lift
-#define F_LIFT_A_INDEX 7
-#define F_LIFT_B_INDEX 8
-#define F_LIFT_STEPPING 0.1
 
 Point2D fieldElements[F_NUM_OF_ELEMENTS][2]; //2 pontból lesz egy szakasz
 
