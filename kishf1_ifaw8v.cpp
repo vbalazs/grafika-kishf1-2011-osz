@@ -252,19 +252,16 @@ void drawWorm(Worm &w) {
 
     //megrajzolni a farkát
     glBegin(GL_LINE_STRIP);
-    //l=1; k=15; a=0.03; -> I=2.059126028
     float ampl = 0.03;
-    float l = 1;
-    float k = 15;
+    float k = 3;
     float xlen = W_TAIL_FULL_LENGTH;
     if (w.isShortMode()) {
-        l = 0.5;
-        k = 30;
+        ampl = 0.030121823;
         xlen = W_TAIL_FULL_LENGTH / 2;
     }
     for (float i = 0.001; i < xlen; i += 0.001) {
         float x = i;
-        float y = w.getNosePos().Y() - ampl * sin(2 * k * M_PI / l * x);
+        float y = w.getNosePos().Y() - ampl * sin(2 * k * M_PI / xlen * x);
 
         if (w.isToLeft()) { //balra megy
             x = w.getNosePos().X() + x;
