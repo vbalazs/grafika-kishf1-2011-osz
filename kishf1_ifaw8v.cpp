@@ -81,6 +81,8 @@
 
 bool working = false;
 float time = 0;
+bool gameOver = false;
+bool win = false;
 
 //(c) [Szir99]
 typedef float Coord;
@@ -230,7 +232,7 @@ class Worm {
 
     bool inLiftPipe(Lift const &lift) {
         int const lastPoint = length / W_TAIL_RESOLUTION;
-        
+
         float const headX = headPoints[0].X();
         float const tailX = tailPoints[lastPoint].X();
         if ((headX > lift.getBeginP().X() &&
@@ -331,6 +333,13 @@ public:
         working = false;
     }
 
+    void checkKilled(Lift &lift) {
+        if (!onTheLift(lift) &&
+                fequals(lift.getBeginP().Y(), fieldElements[6][0].Y())) {
+            gameOver = true;
+        }
+    }
+
     void moveUp(Lift &lift) {
         if (onTheLift(lift) && onDiffLevels(lift))
             setNosePos(Point2D(headPoints[0].X(), headPoints[0].Y() + F_LIFT_STEPPING));
@@ -375,8 +384,6 @@ public:
 
         //esesdetekt
         fallDetect();
-
-        //utkozesdetekt
 
         working = false;
     }
@@ -455,6 +462,15 @@ void simulateWorld(float tstart, float tend) {
 
         greenWorm.control(ts, te);
         redWorm.control(ts, te);
+
+        //utkozesdetekt
+        //piros utoleri a zoldet
+        int const lastPoint = greenWorm.getLength() / W_TAIL_RESOLUTION;
+        if (fequals(redWorm.getHeadPoints()[0].X(), greenWorm.getHeadPoints()[0].X()) &&
+                fequals(redWorm.getHeadPoints()[0].Y(), greenWorm.getHeadPoints()[0].Y())) {
+            gameOver = true;
+            win = true;
+        }
     }
 
 }
@@ -503,17 +519,33 @@ void onInitialization() {
 }
 
 void onIdle() {
-    working = true;
-    float old_time = time;
-    time = glutGet(GLUT_ELAPSED_TIME);
+    if (!gameOver) {
 
-    simulateWorld(old_time, time);
+        working = true;
+        float old_time = time;
+        time = glutGet(GLUT_ELAPSED_TIME);
 
-    working = false;
+        simulateWorld(old_time, time);
+
+        working = false;
+    }
     glutPostRedisplay();
 }
 
 void onDisplay() {
+
+    if (gameOver) {
+        glClearColor(1.0, 0, 0, 0); // torlesi szin beallitasa
+        if (win) {
+            glClearColor(0, 1.0, 0, 0); // torlesi szin beallitasa
+        }
+
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // kepernyo torles
+        glutSwapBuffers();
+
+        return;
+    }
+
     glClearColor(0, 0, 0, 0); // torlesi szin beallitasa
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // kepernyo torles
 
@@ -529,6 +561,9 @@ void onDisplay() {
 }
 
 void onKeyboard(unsigned char key, int x, int y) {
+
+    if (gameOver) return;
+
     if (key == 'd') glutPostRedisplay(); // d beture rajzold ujra a kepet
 
     working = true;
@@ -541,6 +576,9 @@ void onKeyboard(unsigned char key, int x, int y) {
     }
     if (key == 'a') {
         if (lift1.moveDown()) {
+            greenWorm.checkKilled(lift1);
+            redWorm.checkKilled(lift1);
+
             greenWorm.moveDown(lift1);
             redWorm.moveDown(lift1);
         }
@@ -553,6 +591,9 @@ void onKeyboard(unsigned char key, int x, int y) {
     }
     if (key == 'l') {
         if (lift2.moveDown()) {
+            greenWorm.checkKilled(lift2);
+            redWorm.checkKilled(lift2);
+
             greenWorm.moveDown(lift2);
             redWorm.moveDown(lift2);
         }
