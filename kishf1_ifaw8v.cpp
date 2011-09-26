@@ -129,22 +129,28 @@ public:
         level = 2;
     }
 
-    void moveUp() {
+    bool moveUp() {
         if (level < 2) {
 
             beginP.Y() += F_LIFT_STEPPING;
             endP.Y() += F_LIFT_STEPPING;
             level++;
+
+            return true;
         }
+        return false;
     }
 
-    void moveDown() {
+    bool moveDown() {
         if (level > 0) {
 
             beginP.Y() -= F_LIFT_STEPPING;
             endP.Y() -= F_LIFT_STEPPING;
             level--;
+
+            return true;
         }
+        return false;
     }
 
     Point2D getBeginP() const {
@@ -160,6 +166,13 @@ public:
 Point2D fieldElements[F_NUM_OF_ELEMENTS][2]; //2 pontból lesz egy szakasz
 Lift lift1(Point2D(-0.6, 0.4), Point2D(-0.2, 0.4));
 Lift lift2(Point2D(0.6, 0.4), Point2D(0.2, 0.4));
+
+//(c) otlet: https://lists.sch.bme.hu/wws/arc/grafika/2011-09/msg00264.html
+
+bool fequals(float f1, float f2) {
+    if (fabs(f1 - f2) < 0.001) return true;
+    return false;
+}
 
 class Worm {
     Point2D headPoints[W_HEAD_POINTS_NUM];
@@ -192,13 +205,11 @@ class Worm {
         }
     }
 
-    void fall(Lift lift) {
+    void fall(Lift &lift) {
         float const deltaY = 0.01;
+        int const noseIndex = 0;
 
-        int noseIndex = 0;
-        int lastPoint = length / W_TAIL_RESOLUTION;
-
-        if (inLiftPipe(headPoints[noseIndex].X(), tailPoints[lastPoint].X(), lift)) {
+        if (inLiftPipe(lift)) {
 
             //liftre esik v. a fsz-re?
             if (lift.getBeginP().Y() < headPoints[noseIndex].Y()) { //liftre
@@ -217,7 +228,11 @@ class Worm {
 
     }
 
-    bool inLiftPipe(float const headX, float const tailX, Lift const lift) {
+    bool inLiftPipe(Lift const &lift) {
+        int const lastPoint = length / W_TAIL_RESOLUTION;
+        
+        float const headX = headPoints[0].X();
+        float const tailX = tailPoints[lastPoint].X();
         if ((headX > lift.getBeginP().X() &&
                 headX < lift.getEndP().X() &&
                 tailX > lift.getBeginP().X() &&
@@ -230,6 +245,34 @@ class Worm {
             return true;
 
         return false;
+    }
+
+    bool onTheLift(Lift &lift) {
+        int const lastPoint = length / W_TAIL_RESOLUTION;
+
+        if (((headPoints[0].X() > lift.getBeginP().X() &&
+                headPoints[0].X() < lift.getEndP().X()) ||
+                (tailPoints[lastPoint].X() > lift.getBeginP().X() &&
+                tailPoints[lastPoint].X() < lift.getEndP().X()))
+                ||
+                ((headPoints[0].X() < lift.getBeginP().X() &&
+                headPoints[0].X() > lift.getEndP().X()) ||
+                (tailPoints[lastPoint].X() < lift.getBeginP().X() &&
+                tailPoints[lastPoint].X() > lift.getEndP().X()))
+                ) {
+            return true;
+        }
+
+        return false;
+    }
+
+    bool onDiffLevels(Lift &lift) {
+        float const deltaY = 0.01;
+        if (fequals(headPoints[0].Y() - W_HEAD_SIZE, lift.getBeginP().Y() + deltaY)) {
+            return false;
+        }
+
+        return true;
     }
 public:
 
@@ -288,6 +331,16 @@ public:
         working = false;
     }
 
+    void moveUp(Lift &lift) {
+        if (onTheLift(lift) && onDiffLevels(lift))
+            setNosePos(Point2D(headPoints[0].X(), headPoints[0].Y() + F_LIFT_STEPPING));
+    }
+
+    void moveDown(Lift &lift) {
+        if (inLiftPipe(lift))
+            setNosePos(Point2D(headPoints[0].X(), headPoints[0].Y() - F_LIFT_STEPPING));
+    }
+
     void control(float ts, float te) {
         //step
         working = true;
@@ -330,13 +383,6 @@ public:
 
 };
 
-//(c) otlet: https://lists.sch.bme.hu/wws/arc/grafika/2011-09/msg00264.html
-
-bool fequals(float f1, float f2) {
-    if (fabs(f1 - f2) < 0.001) return true;
-    return false;
-}
-
 Worm greenWorm;
 Worm redWorm;
 
@@ -354,7 +400,7 @@ void drawFieldElements() {
     glEnd();
 }
 
-void drawLift(Lift lift) {
+void drawLift(Lift &lift) {
     glColor3f(1.0, 1.0, 1.0); // fehérrel
     glBegin(GL_LINES);
 
@@ -456,14 +502,22 @@ void onInitialization() {
     redWorm.setDir();
 }
 
-// Rajzolas, ha az alkalmazas ablak ervenytelenne valik, akkor ez a fuggveny hivodik meg
+void onIdle() {
+    working = true;
+    float old_time = time;
+    time = glutGet(GLUT_ELAPSED_TIME);
+
+    simulateWorld(old_time, time);
+
+    working = false;
+    glutPostRedisplay();
+}
 
 void onDisplay() {
     glClearColor(0, 0, 0, 0); // torlesi szin beallitasa
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // kepernyo torles
 
     if (!working) {
-        //ujrarajzolasok
         drawFieldElements();
         drawLift(lift1);
         drawLift(lift2);
@@ -480,35 +534,37 @@ void onKeyboard(unsigned char key, int x, int y) {
     working = true;
     //lift iranyitasanak kezelese
     if (key == 'q') {
-        lift1.moveUp();
+        if (lift1.moveUp()) {
+            greenWorm.moveUp(lift1);
+            redWorm.moveUp(lift1);
+        }
     }
     if (key == 'a') {
-        lift1.moveDown();
+        if (lift1.moveDown()) {
+            greenWorm.moveDown(lift1);
+            redWorm.moveDown(lift1);
+        }
     }
     if (key == 'o') {
-        lift2.moveUp();
+        if (lift2.moveUp()) {
+            greenWorm.moveUp(lift2);
+            redWorm.moveUp(lift2);
+        }
     }
     if (key == 'l') {
-        lift2.moveDown();
+        if (lift2.moveDown()) {
+            greenWorm.moveDown(lift2);
+            redWorm.moveDown(lift2);
+        }
     }
 
+    onIdle();
     working = false;
 
     glutPostRedisplay();
 }
 
 void onMouse(int button, int state, int x, int y) {
-}
-
-void onIdle() {
-    working = true;
-    float old_time = time;
-    time = glutGet(GLUT_ELAPSED_TIME);
-
-    simulateWorld(old_time, time);
-
-    working = false;
-    glutPostRedisplay();
 }
 
 // ...Idaig modosithatod
