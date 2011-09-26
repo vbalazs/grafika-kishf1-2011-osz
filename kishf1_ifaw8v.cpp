@@ -158,8 +158,8 @@ public:
 };
 
 Point2D fieldElements[F_NUM_OF_ELEMENTS][2]; //2 pontból lesz egy szakasz
-Lift lift1(Point2D(0.6, 0.4), Point2D(0.2, 0.4));
-Lift lift2(Point2D(-0.6, 0.4), Point2D(-0.2, 0.4));
+Lift lift1(Point2D(-0.6, 0.4), Point2D(-0.2, 0.4));
+Lift lift2(Point2D(0.6, 0.4), Point2D(0.2, 0.4));
 
 class Worm {
     Point2D headPoints[W_HEAD_POINTS_NUM];
@@ -193,21 +193,17 @@ class Worm {
     }
 
     void fall(Lift lift) {
-        float deltaY = 0.01;
+        float const deltaY = 0.01;
 
         int noseIndex = 0;
         int lastPoint = length / W_TAIL_RESOLUTION;
 
-        if (headPoints[noseIndex].X() > lift.getBeginP().X() &&
-                headPoints[noseIndex].X() < lift.getEndP().X() &&
-                tailPoints[lastPoint].X() > lift.getBeginP().X() &&
-                tailPoints[lastPoint].X() < lift.getEndP().X()
-                ) {
+        if (inLiftPipe(headPoints[noseIndex].X(), tailPoints[lastPoint].X(), lift)) {
 
             //liftre esik v. a fsz-re?
             if (lift.getBeginP().Y() < headPoints[noseIndex].Y()) { //liftre
                 setNosePos(Point2D(headPoints[noseIndex].X(),
-                        lift.getBeginP().Y() + W_HEAD_SIZE));
+                        lift.getBeginP().Y() + W_HEAD_SIZE + deltaY));
             } else { //fsz
                 setNosePos(Point2D(headPoints[noseIndex].X(), -1.0 + W_HEAD_SIZE + deltaY));
             }
@@ -219,6 +215,21 @@ class Worm {
         fall(lift1);
         fall(lift2);
 
+    }
+
+    bool inLiftPipe(float const headX, float const tailX, Lift const lift) {
+        if ((headX > lift.getBeginP().X() &&
+                headX < lift.getEndP().X() &&
+                tailX > lift.getBeginP().X() &&
+                tailX < lift.getEndP().X())
+                ||
+                (headX < lift.getBeginP().X() &&
+                headX > lift.getEndP().X() &&
+                tailX < lift.getBeginP().X() &&
+                tailX > lift.getEndP().X()))
+            return true;
+
+        return false;
     }
 public:
 
