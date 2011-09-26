@@ -76,10 +76,8 @@
 #define W_SPEED_DIV 36
 
 //pálya (field) elemek
-#define F_NUM_OF_ELEMENTS 9 //7 statikus szint-elem + 2 lift
-#define F_LIFT_A_INDEX 7
-#define F_LIFT_B_INDEX 8
-#define F_LIFT_STEPPING 0.1
+#define F_NUM_OF_ELEMENTS 7
+#define F_LIFT_STEPPING 0.7
 
 bool working = false;
 float time = 0;
@@ -120,7 +118,48 @@ public:
     }
 };
 
+class Lift {
+    Point2D beginP, endP;
+    int level; //0,1,2
+public:
+
+    Lift(Point2D a, Point2D b) {
+        beginP = a;
+        endP = b;
+        level = 2;
+    }
+
+    void moveUp() {
+        if (level < 2) {
+
+            beginP.Y() += F_LIFT_STEPPING;
+            endP.Y() += F_LIFT_STEPPING;
+            level++;
+        }
+    }
+
+    void moveDown() {
+        if (level > 0) {
+
+            beginP.Y() -= F_LIFT_STEPPING;
+            endP.Y() -= F_LIFT_STEPPING;
+            level--;
+        }
+    }
+
+    Point2D getBeginP() const {
+        return beginP;
+    }
+
+    Point2D getEndP() const {
+        return endP;
+    }
+
+};
+
 Point2D fieldElements[F_NUM_OF_ELEMENTS][2]; //2 pontból lesz egy szakasz
+Lift lift1(Point2D(0.6, 0.4), Point2D(0.2, 0.4));
+Lift lift2(Point2D(-0.6, 0.4), Point2D(-0.2, 0.4));
 
 class Worm {
     Point2D headPoints[W_HEAD_POINTS_NUM];
@@ -153,26 +192,22 @@ class Worm {
         }
     }
 
-    void fall(int liftindex) {
+    void fall(Lift lift) {
         float deltaY = 0.01;
 
         int noseIndex = 0;
         int lastPoint = length / W_TAIL_RESOLUTION;
-//        if (toRight < 0) {
-//            noseIndex = 2;
-//            lastPoint = 0;
-//        }
 
-        if (headPoints[noseIndex].X() > fieldElements[liftindex][0].X() &&
-                headPoints[noseIndex].X() < fieldElements[liftindex][1].X() &&
-                tailPoints[lastPoint].X() > fieldElements[liftindex][0].X() &&
-                tailPoints[lastPoint].X() < fieldElements[liftindex][1].X()
+        if (headPoints[noseIndex].X() > lift.getBeginP().X() &&
+                headPoints[noseIndex].X() < lift.getEndP().X() &&
+                tailPoints[lastPoint].X() > lift.getBeginP().X() &&
+                tailPoints[lastPoint].X() < lift.getEndP().X()
                 ) {
 
             //liftre esik v. a fsz-re?
-            if (fieldElements[liftindex][0].Y() < headPoints[noseIndex].Y()) { //liftre
+            if (lift.getBeginP().Y() < headPoints[noseIndex].Y()) { //liftre
                 setNosePos(Point2D(headPoints[noseIndex].X(),
-                        fieldElements[liftindex][0].Y() + W_HEAD_SIZE));
+                        lift.getBeginP().Y() + W_HEAD_SIZE));
             } else { //fsz
                 setNosePos(Point2D(headPoints[noseIndex].X(), -1.0 + W_HEAD_SIZE + deltaY));
             }
@@ -181,8 +216,8 @@ class Worm {
 
     void fallDetect() {
 
-        fall(F_LIFT_A_INDEX);
-        fall(F_LIFT_B_INDEX);
+        fall(lift1);
+        fall(lift2);
 
     }
 public:
@@ -291,12 +326,6 @@ bool fequals(float f1, float f2) {
     return false;
 }
 
-bool isYOverflow(const float y, const bool positive) {
-    if (fequals(y - 1.1, 0) && positive) return true; //lebegopontos szopófaktor!
-    if (fequals(y + 1.1, 0) && !positive) return true;
-    return false;
-}
-
 Worm greenWorm;
 Worm redWorm;
 
@@ -309,6 +338,18 @@ void drawFieldElements() {
     for (int i = 0; i < F_NUM_OF_ELEMENTS; i++) {
         glVertex2f(fieldElements[i][0].X(), fieldElements[i][0].Y());
         glVertex2f(fieldElements[i][1].X(), fieldElements[i][1].Y());
+    }
+
+    glEnd();
+}
+
+void drawLift(Lift lift) {
+    glColor3f(1.0, 1.0, 1.0); // fehérrel
+    glBegin(GL_LINES);
+
+    for (int i = 0; i < 2; i++) {
+        glVertex2f(lift.getBeginP().X(), lift.getBeginP().Y());
+        glVertex2f(lift.getEndP().X(), lift.getEndP().Y());
     }
 
     glEnd();
@@ -366,14 +407,14 @@ void simulateWorld(float tstart, float tend) {
 void onInitialization() {
     //szintek letrehozasa
     //felso szint
-    fieldElements[0][0] = Point2D(-1.0, 0.30);
-    fieldElements[0][1] = Point2D(-0.6, 0.30);
+    fieldElements[0][0] = Point2D(-1.0, 0.40);
+    fieldElements[0][1] = Point2D(-0.6, 0.40);
 
-    fieldElements[1][0] = Point2D(-0.2, 0.30);
-    fieldElements[1][1] = Point2D(0.2, 0.30);
+    fieldElements[1][0] = Point2D(-0.2, 0.40);
+    fieldElements[1][1] = Point2D(0.2, 0.40);
 
-    fieldElements[2][0] = Point2D(0.6, 0.30);
-    fieldElements[2][1] = Point2D(1.0, 0.30);
+    fieldElements[2][0] = Point2D(0.6, 0.40);
+    fieldElements[2][1] = Point2D(1.0, 0.40);
 
     //kozepso szint
     fieldElements[3][0] = Point2D(-1.0, -0.30);
@@ -389,15 +430,7 @@ void onInitialization() {
     fieldElements[6][0] = Point2D(-1.0, -1.00);
     fieldElements[6][1] = Point2D(1.0, -1.0);
 
-    //egyik lift ("A")
-    fieldElements[F_LIFT_A_INDEX][0] = Point2D(-0.6, 0.0);
-    fieldElements[F_LIFT_A_INDEX][1] = Point2D(-0.2, 0.0);
-
-    //masik lift ("B")
-    fieldElements[F_LIFT_B_INDEX][0] = Point2D(0.2, 0.0);
-    fieldElements[F_LIFT_B_INDEX][1] = Point2D(0.6, 0.0);
-
-    Point2D nose(-0.00, 0.34);
+    Point2D nose(-0.00, 0.44);
     Color c;
 
     //zöld giliszta
@@ -421,6 +454,8 @@ void onDisplay() {
     if (!working) {
         //ujrarajzolasok
         drawFieldElements();
+        drawLift(lift1);
+        drawLift(lift2);
         drawWorm(greenWorm);
         drawWorm(redWorm);
     }
@@ -434,28 +469,16 @@ void onKeyboard(unsigned char key, int x, int y) {
     working = true;
     //lift iranyitasanak kezelese
     if (key == 'q') {
-        if (!isYOverflow(fieldElements[F_LIFT_A_INDEX][0].Y() + F_LIFT_STEPPING, true)) {
-            fieldElements[F_LIFT_A_INDEX][0].Y() += F_LIFT_STEPPING;
-            fieldElements[F_LIFT_A_INDEX][1].Y() += F_LIFT_STEPPING;
-        }
+        lift1.moveUp();
     }
     if (key == 'a') {
-        if (!isYOverflow(fieldElements[F_LIFT_A_INDEX][0].Y() - F_LIFT_STEPPING, false)) {
-            fieldElements[F_LIFT_A_INDEX][0].Y() -= F_LIFT_STEPPING;
-            fieldElements[F_LIFT_A_INDEX][1].Y() -= F_LIFT_STEPPING;
-        }
+        lift1.moveDown();
     }
     if (key == 'o') {
-        if (!isYOverflow(fieldElements[F_LIFT_B_INDEX][0].Y() + F_LIFT_STEPPING, true)) {
-            fieldElements[F_LIFT_B_INDEX][0].Y() += F_LIFT_STEPPING;
-            fieldElements[F_LIFT_B_INDEX][1].Y() += F_LIFT_STEPPING;
-        }
+        lift2.moveUp();
     }
     if (key == 'l') {
-        if (!isYOverflow(fieldElements[F_LIFT_B_INDEX][0].Y() - F_LIFT_STEPPING, false)) {
-            fieldElements[F_LIFT_B_INDEX][0].Y() -= F_LIFT_STEPPING;
-            fieldElements[F_LIFT_B_INDEX][1].Y() -= F_LIFT_STEPPING;
-        }
+        lift2.moveDown();
     }
 
     working = false;
