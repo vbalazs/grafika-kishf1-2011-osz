@@ -1,3 +1,14 @@
 Elfogadták! :)
 
+Feladat leírása:
+Készítsen 2D giliszta üldözéses játékot OpenGL-ben.
+
+Két játékosunk és gilisztánk van, az egyik giliszta zöld, a másik piros. A giliszták teste szinusz hullám, amelyet vonallal, háromszög vagy négyszög szalaggal lehet felrajzolni. A giliszták feje sokszög. Az egyik játékos célja, hogy a piros giliszta érje utol a zöldet, a másiké, hogy megakadályozza ezt.
+
+A giliszták három szinten mozoghatnak, a szintek között a két játékos egy-egy lifttel viheti át őket (Bal lift fel/le = q/a, a jobb lifté pedig o/l). A giliszták gilisztamozgással haladnak előre (nyújtáskor a farkuk vége, összehúzódáskor a fejük mozdulatlan, közben a hosszuk megközelítőleg állandó), és a falnál hátra arcot csinálnak. A giliszta akár egyetlen pontján is képes kapaszkodni, ha viszont egyetlen ponton sem támaszkodhat, leesik és az alsóbb szinten folytatja a mozgását a korábbi irányban.
+
+A játék befejeződik, ha valamely gilisztát a lifttel agyonnyomjuk, vagy a piros utoléri a zöldet.
+
+Kép: lasd: hazi1.png
+
 A forráskód licensze: GPLv3
